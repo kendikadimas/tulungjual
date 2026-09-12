@@ -39,7 +39,9 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
-            'pendingCount' => fn () => Listing::where('status', 'pending')->count(),
+            'pendingCount' => fn () => $request->user()?->isAdmin()
+                ? Listing::where('status_approval', 'pending')->count()
+                : 0,
         ];
     }
 }
