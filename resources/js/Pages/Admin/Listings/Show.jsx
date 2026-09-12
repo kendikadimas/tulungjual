@@ -9,6 +9,8 @@ import {
     Building2, 
     AlertTriangle,
     Clock,
+    FileText,
+    Video,
     Image as ImageIcon
 } from 'lucide-react';
 
@@ -137,6 +139,32 @@ export default function Show({ listing }) {
                             <span className="text-xs text-[#FF8A00] block font-semibold">Status Sertifikat:</span>
                             <span className="text-white font-bold">{listing.status_sertifikat}</span>
                         </div>
+                        <div>
+                            <span className="text-xs text-[#FF8A00] block font-semibold">Luas di Sertifikat:</span>
+                            <span className="text-white font-bold">{listing.luas_sertifikat ? `${listing.luas_sertifikat} m²` : '-'}</span>
+                        </div>
+                        <div>
+                            <span className="text-xs text-[#FF8A00] block font-semibold">Status Sengketa:</span>
+                            <span className={`font-bold ${listing.status_sengketa && listing.status_sengketa.toLowerCase().includes('tidak') ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                {listing.status_sengketa || '-'}
+                            </span>
+                        </div>
+                        <div>
+                            <span className="text-xs text-[#FF8A00] block font-semibold">Status PBG / IMB:</span>
+                            <span className="text-white font-bold">{listing.status_pbg_imb || '-'}</span>
+                        </div>
+                        <div>
+                            <span className="text-xs text-[#FF8A00] block font-semibold">Status PBB:</span>
+                            <span className="text-white font-bold">{listing.status_pbb || '-'}</span>
+                        </div>
+                        <div>
+                            <span className="text-xs text-[#FF8A00] block font-semibold">Tahun PBB:</span>
+                            <span className="text-white font-bold">{listing.tahun_pbb || '-'}</span>
+                        </div>
+                        <div>
+                            <span className="text-xs text-[#FF8A00] block font-semibold">NJOP:</span>
+                            <span className="text-white font-bold">{listing.njop ? formatRupiah(listing.njop) : '-'}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -151,10 +179,55 @@ export default function Show({ listing }) {
                             </div>
                             <div>
                                 <h2 className="text-xl font-bold text-slate-900">{listing.judul}</h2>
-                                <p className="text-sm font-bold text-[#002B7F] mt-1">{formatRupiah(listing.harga)}</p>
-                                <p className="text-xs text-slate-500 mt-2">{listing.alamat_lengkap} ({listing.kelurahan}, {listing.kecamatan}, {listing.kota})</p>
+                                <div className="flex flex-wrap items-center gap-2 mt-2">
+                                    <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-[#002B7F] text-xs font-bold">
+                                        {listing.jenis_iklan}
+                                    </span>
+                                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">
+                                        {listing.jenis_properti}
+                                    </span>
+                                    <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 text-xs font-bold">
+                                        Status: {listing.status_transaksi}
+                                    </span>
+                                    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${listing.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                                        {listing.is_active ? 'Aktif' : 'Nonaktif'}
+                                    </span>
+                                </div>
+                                <p className="text-sm font-bold text-[#002B7F] mt-3">{formatRupiah(listing.harga)}</p>
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-slate-600">
+                                    <span>Jenis Harga: <span className="font-semibold text-slate-800">{listing.jenis_harga || '-'}</span></span>
+                                    <span>{listing.bisa_nego ? 'Bisa Nego' : 'Harga Pas'}</span>
+                                    {listing.harga_promo && <span className="text-rose-600 font-semibold">Promo: {formatRupiah(listing.harga_promo)}</span>}
+                                    {listing.metode_pembayaran && <span>Pembayaran: <span className="font-semibold text-slate-800">{listing.metode_pembayaran}</span></span>}
+                                    {listing.booking_fee && <span>Booking Fee: <span className="font-semibold text-slate-800">{formatRupiah(listing.booking_fee)}</span></span>}
+                                </div>
                             </div>
-                            <div className="pt-2">
+
+                            {/* Lokasi */}
+                            <div className="pt-3 border-t border-slate-100">
+                                <h4 className="text-xs font-bold text-slate-700 mb-2">Lokasi</h4>
+                                <p className="text-xs text-slate-600 mb-3">{listing.alamat_lengkap} ({listing.kelurahan}, {listing.kecamatan}, {listing.kota}, {listing.provinsi})</p>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-4 text-xs">
+                                    <div><span className="text-slate-400 block">Provinsi:</span> <span className="font-semibold text-slate-800">{listing.provinsi || '-'}</span></div>
+                                    <div><span className="text-slate-400 block">Kota / Kabupaten:</span> <span className="font-semibold text-slate-800">{listing.kota || '-'}</span></div>
+                                    <div><span className="text-slate-400 block">Kecamatan:</span> <span className="font-semibold text-slate-800">{listing.kecamatan || '-'}</span></div>
+                                    <div><span className="text-slate-400 block">Kelurahan / Desa:</span> <span className="font-semibold text-slate-800">{listing.kelurahan || '-'}</span></div>
+                                    <div><span className="text-slate-400 block">Kode Pos:</span> <span className="font-semibold text-slate-800">{listing.kode_pos || '-'}</span></div>
+                                    <div><span className="text-slate-400 block">Nama Jalan / Blok:</span> <span className="font-semibold text-slate-800">{listing.nama_jalan || '-'}</span></div>
+                                    <div><span className="text-slate-400 block">Nomor:</span> <span className="font-semibold text-slate-800">{listing.nomor_jalan || '-'}</span></div>
+                                    <div><span className="text-slate-400 block">Patokan:</span> <span className="font-semibold text-slate-800">{listing.patokan || '-'}</span></div>
+                                    <div><span className="text-slate-400 block">Privasi Lokasi:</span> <span className="font-semibold text-slate-800">{listing.privasi_lokasi === 'perkiraan' ? 'Perkiraan (disamarkan)' : 'Tepat'}</span></div>
+                                    <div><span className="text-slate-400 block">Koordinat:</span> <span className="font-semibold text-slate-800 font-mono text-[11px]">{listing.titik_lat && listing.titik_lng ? `${listing.titik_lat}, ${listing.titik_lng}` : '-'}</span></div>
+                                </div>
+                            </div>
+
+                            {/* Kontak & Privasi */}
+                            <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-y-3 gap-x-4 text-xs">
+                                <div><span className="text-slate-400 block">Cara Dihubungi:</span> <span className="font-semibold text-slate-800">{listing.cara_dihubungi || '-'}</span></div>
+                                <div><span className="text-slate-400 block">Tampilkan No. Telepon:</span> <span className="font-semibold text-slate-800">{listing.tampilkan_no_telepon ? 'Ya' : 'Tidak'}</span></div>
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-100">
                                 <h4 className="text-xs font-bold text-slate-700 mb-1">Deskripsi:</h4>
                                 <p className="text-xs text-slate-600 whitespace-pre-line bg-slate-50 p-4 rounded-2xl border border-slate-100">{listing.deskripsi}</p>
                             </div>
@@ -199,10 +272,29 @@ export default function Show({ listing }) {
                                 <div><span className="text-slate-400 block">Dimensi (P x L):</span> <span className="font-semibold text-slate-800">{listing.panjang_tanah && listing.lebar_tanah ? `${listing.panjang_tanah} x ${listing.lebar_tanah} m` : '-'}</span></div>
                                 <div><span className="text-slate-400 block">Jumlah Lantai:</span> <span className="font-semibold text-slate-800">{listing.jumlah_lantai || '-'}</span></div>
                                 <div><span className="text-slate-400 block">Kamar Tidur / Mandi:</span> <span className="font-semibold text-slate-800">{listing.kamar_tidur || 0} / {listing.kamar_mandi || 0}</span></div>
+                                <div><span className="text-slate-400 block">Toilet Khusus:</span> <span className="font-semibold text-slate-800">{listing.toilet || 0}</span></div>
+                                <div><span className="text-slate-400 block">Ruang Tamu:</span> <span className="font-semibold text-slate-800">{listing.ruang_tamu || 0}</span></div>
+                                <div><span className="text-slate-400 block">Ruang Keluarga:</span> <span className="font-semibold text-slate-800">{listing.ruang_keluarga || 0}</span></div>
+                                <div><span className="text-slate-400 block">Ruang Makan:</span> <span className="font-semibold text-slate-800">{listing.ruang_makan || 0}</span></div>
+                                <div><span className="text-slate-400 block">Dapur:</span> <span className="font-semibold text-slate-800">{listing.dapur || 0}</span></div>
+                                <div><span className="text-slate-400 block">Gudang:</span> <span className="font-semibold text-slate-800">{listing.gudang || 0}</span></div>
+                                <div><span className="text-slate-400 block">Balkon / Teras:</span> <span className="font-semibold text-slate-800">{listing.balkon || 0} / {listing.teras || 0}</span></div>
+                                <div><span className="text-slate-400 block">Garasi / Carport:</span> <span className="font-semibold text-slate-800">{listing.garasi || 0} / {listing.carport || 0}</span></div>
+                                <div><span className="text-slate-400 block">Kapasitas Parkir:</span> <span className="font-semibold text-slate-800">{listing.kapasitas_parkir ? `${listing.kapasitas_parkir} Kendaraan` : '-'}</span></div>
                                 <div><span className="text-slate-400 block">Kondisi Bangunan:</span> <span className="font-semibold text-slate-800">{listing.kondisi_bangunan || '-'}</span></div>
                                 <div><span className="text-slate-400 block">Furnitur:</span> <span className="font-semibold text-slate-800">{listing.status_furnitur || '-'}</span></div>
                                 <div><span className="text-slate-400 block">Tahun Bangun / Renovasi:</span> <span className="font-semibold text-slate-800">{listing.tahun_dibangun || '-'} / {listing.tahun_renovasi || '-'}</span></div>
                                 <div><span className="text-slate-400 block">Kondisi Saat Ini:</span> <span className="font-semibold text-slate-800">{listing.kondisi_saat_ini || '-'}</span></div>
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-100">
+                                <h4 className="text-xs font-bold text-slate-700 mb-2">Material Bangunan</h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-3 gap-x-4 text-xs">
+                                    <div><span className="text-slate-400 block">Struktur:</span> <span className="font-semibold text-slate-800">{listing.material_struktur || '-'}</span></div>
+                                    <div><span className="text-slate-400 block">Dinding:</span> <span className="font-semibold text-slate-800">{listing.material_dinding || '-'}</span></div>
+                                    <div><span className="text-slate-400 block">Lantai:</span> <span className="font-semibold text-slate-800">{listing.material_lantai || '-'}</span></div>
+                                    <div><span className="text-slate-400 block">Atap:</span> <span className="font-semibold text-slate-800">{listing.material_atap || '-'}</span></div>
+                                </div>
                             </div>
                         </div>
 
@@ -239,8 +331,9 @@ export default function Show({ listing }) {
                                 <div><span className="text-slate-400 block">Jenis Lingkungan:</span> <span className="font-semibold text-slate-800">{listing.jenis_lingkungan || '-'}</span></div>
                                 <div><span className="text-slate-400 block">Bebas Banjir / Longsor:</span> <span className="font-semibold text-slate-800">{listing.bebas_banjir ? 'Bebas Banjir' : '-'} {listing.rawan_longsor ? '/ Rawan Longsor' : ''}</span></div>
                                 <div><span className="text-slate-400 block">Jarak Tol / Stasiun:</span> <span className="font-semibold text-slate-800">{listing.jarak_tol || '-'} / {listing.jarak_stasiun || '-'}</span></div>
-                                <div><span className="text-slate-400 block">Jarak RS / Sekolah:</span> <span className="font-semibold text-slate-800">{listing.jarak_rs || '-'} / {listing.jarak_sekolah || '-'}</span></div>
-                                <div><span className="text-slate-400 block">Jarak Pasar / Pusat Kota:</span> <span className="font-semibold text-slate-800">{listing.jarak_pasar || '-'} / {listing.jarak_pusat_kota || '-'}</span></div>
+                                <div><span className="text-slate-400 block">Jarak Bandara / RS:</span> <span className="font-semibold text-slate-800">{listing.jarak_bandara || '-'} / {listing.jarak_rs || '-'}</span></div>
+                                <div><span className="text-slate-400 block">Jarak Sekolah / Pasar:</span> <span className="font-semibold text-slate-800">{listing.jarak_sekolah || '-'} / {listing.jarak_pasar || '-'}</span></div>
+                                <div><span className="text-slate-400 block">Jarak Pusat Kota:</span> <span className="font-semibold text-slate-800">{listing.jarak_pusat_kota || '-'}</span></div>
                             </div>
                         </div>
 
@@ -255,6 +348,26 @@ export default function Show({ listing }) {
                                     <div><span className="text-slate-400 block">Lebar Muka:</span> <span className="font-semibold text-slate-800">{listing.lebar_muka ? `${listing.lebar_muka} m` : '-'}</span></div>
                                     <div><span className="text-slate-400 block">Area Parkir:</span> <span className="font-semibold text-slate-800">{listing.area_parkir || '-'}</span></div>
                                 </div>
+                                {listing.cocok_untuk_tanah && listing.cocok_untuk_tanah.length > 0 && (
+                                    <div className="pt-2 border-t border-slate-100">
+                                        <span className="text-xs text-slate-400 block mb-1.5">Cocok Untuk (Tanah):</span>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {listing.cocok_untuk_tanah.map((c, i) => (
+                                                <span key={i} className="px-2.5 py-1 bg-blue-50 text-[#002B7F] rounded-lg text-xs font-semibold border border-blue-100">{c}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {listing.cocok_untuk_komersial && listing.cocok_untuk_komersial.length > 0 && (
+                                    <div className="pt-2 border-t border-slate-100">
+                                        <span className="text-xs text-slate-400 block mb-1.5">Cocok Untuk (Komersial):</span>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {listing.cocok_untuk_komersial.map((c, i) => (
+                                                <span key={i} className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-lg text-xs font-semibold border border-amber-100">{c}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -272,7 +385,28 @@ export default function Show({ listing }) {
                                     <div><span className="text-slate-400 block">Booking Fee / DP:</span> <span className="font-semibold text-slate-800">{formatRupiah(dev.booking_fee)} / {dev.dp || '-'}</span></div>
                                     <div><span className="text-slate-400 block">Bank Partner:</span> <span className="font-semibold text-slate-800">{dev.bank_partner || '-'}</span></div>
                                     <div><span className="text-slate-400 block">Estimasi Serah Terima:</span> <span className="font-semibold text-slate-800">{dev.estimasi_serah_terima || '-'}</span></div>
+                                    <div><span className="text-slate-400 block">Pilihan KPR:</span> <span className="font-semibold text-slate-800">{dev.pilihan_kpr || '-'}</span></div>
+                                    <div className="col-span-2 sm:col-span-3"><span className="text-slate-400 block">Fasilitas Cluster:</span> <span className="font-semibold text-slate-800">{dev.fasilitas_cluster || '-'}</span></div>
                                 </div>
+                                {(dev.brosur_url || dev.site_plan_url || dev.video_marketing_link) && (
+                                    <div className="pt-3 border-t border-slate-100 flex flex-wrap gap-2">
+                                        {dev.brosur_url && (
+                                            <a href={dev.brosur_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition border border-rose-200">
+                                                <FileText className="w-3.5 h-3.5" /> Lihat Brosur
+                                            </a>
+                                        )}
+                                        {dev.site_plan_url && (
+                                            <a href={dev.site_plan_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-[#0070F3] rounded-xl text-xs font-bold transition border border-blue-200">
+                                                <FileText className="w-3.5 h-3.5" /> Lihat Site Plan
+                                            </a>
+                                        )}
+                                        {dev.video_marketing_link && (
+                                            <a href={dev.video_marketing_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition border border-slate-200">
+                                                <Video className="w-3.5 h-3.5" /> Video Marketing
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -287,10 +421,18 @@ export default function Show({ listing }) {
                             <div className="space-y-2.5 text-xs text-slate-700">
                                 <div><span className="text-slate-400 block">Nama Akun:</span> <span className="font-bold">{listing.user?.name}</span></div>
                                 <div><span className="text-slate-400 block">Email Akun:</span> <span className="font-bold">{listing.user?.email}</span></div>
+                                <div><span className="text-slate-400 block">No. HP Akun:</span> <span className="font-bold">{listing.user?.no_hp || '-'}</span></div>
                                 <div><span className="text-slate-400 block">Nama Pengiklan di Form:</span> <span className="font-bold">{pengiklan.nama_pengiklan}</span></div>
                                 <div><span className="text-slate-400 block">Jenis Pengiklan:</span> <span className="font-bold">{pengiklan.jenis_pengiklan}</span></div>
+                                <div><span className="text-slate-400 block">Nama Perusahaan:</span> <span className="font-bold">{pengiklan.nama_perusahaan || '-'}</span></div>
                                 <div><span className="text-slate-400 block">Nomor WhatsApp:</span> <span className="font-bold text-[#0070F3]">{pengiklan.no_wa}</span></div>
                                 <div><span className="text-slate-400 block">Hubungan dg Properti:</span> <span className="font-bold">{pengiklan.hubungan_dengan_properti}</span></div>
+                                <div className="pt-2 border-t border-slate-100">
+                                    <span className="text-slate-400 block mb-1">Pernyataan Kewenangan:</span>
+                                    <span className={`font-bold ${pengiklan.pernyataan_kewenangan ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                        {pengiklan.pernyataan_kewenangan ? '✓ Disetujui oleh Pengiklan' : '✗ Belum Disetujui'}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>

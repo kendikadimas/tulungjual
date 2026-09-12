@@ -7,6 +7,7 @@ use App\Http\Controllers\PublicListingController;
 use App\Http\Controllers\StaticPageController;
 use App\Http\Controllers\UserListingController;
 use App\Http\Middleware\EnsureIsAdmin;
+use App\Http\Middleware\EnsureIsSuperAdmin;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -60,6 +61,11 @@ Route::middleware(['auth', EnsureIsAdmin::class])->prefix('admin')->name('admin.
     Route::put('/categories/{category}', [AdminController::class, 'updateCategory'])->name('categories.update');
     Route::patch('/categories/{category}/toggle', [AdminController::class, 'toggleCategory'])->name('categories.toggle');
     Route::delete('/categories/{category}', [AdminController::class, 'destroyCategory'])->name('categories.destroy');
+
+    // Activity Log — super admin only
+    Route::middleware(EnsureIsSuperAdmin::class)->group(function () {
+        Route::get('/activity-logs', [AdminController::class, 'activityLogs'])->name('activity-logs.index');
+    });
 });
 
 require __DIR__.'/auth.php';

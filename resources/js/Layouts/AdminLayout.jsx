@@ -12,6 +12,9 @@ import {
     X,
     Clock,
     ChevronRight,
+    History,
+    ShieldCheck,
+    Crown,
 } from 'lucide-react';
 
 const navItems = [
@@ -36,11 +39,18 @@ const navItems = [
         href: '/admin/categories',
         icon: Tag,
     },
+    {
+        label: 'Log Aktivitas',
+        href: '/admin/activity-logs',
+        icon: History,
+        superAdminOnly: true,
+    },
 ];
 
 export default function AdminLayout({ children, title }) {
     const { auth, pendingCount = 0 } = usePage().props;
     const user = auth?.user;
+    const isSuperAdmin = user?.role === 'super_admin';
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
     const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
@@ -53,6 +63,8 @@ export default function AdminLayout({ children, title }) {
     const handleLogout = () => {
         router.post('/logout');
     };
+
+    const visibleNavItems = navItems.filter((item) => !item.superAdminOnly || isSuperAdmin);
 
     const SidebarContent = () => (
         <div className="flex flex-col h-full">
@@ -71,7 +83,7 @@ export default function AdminLayout({ children, title }) {
 
             {/* Navigation */}
             <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                {navItems.map((item) => {
+                {visibleNavItems.map((item) => {
                     const Icon = item.icon;
                     const active = isActive(item.href);
                     return (
@@ -122,6 +134,12 @@ export default function AdminLayout({ children, title }) {
                         <div className="min-w-0">
                             <p className="text-white text-xs font-bold truncate">{user?.name || 'Admin'}</p>
                             <p className="text-blue-300 text-[10px] truncate">{user?.email || ''}</p>
+                            <span className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${
+                                isSuperAdmin ? 'bg-[#FF8A00] text-white' : 'bg-white/15 text-blue-100'
+                            }`}>
+                                {isSuperAdmin ? <Crown className="w-2.5 h-2.5" /> : <ShieldCheck className="w-2.5 h-2.5" />}
+                                {isSuperAdmin ? 'Super Admin' : 'Admin'}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -189,7 +207,15 @@ export default function AdminLayout({ children, title }) {
                                 {pendingCount} Pending
                             </Link>
                         )}
-                        <div className="text-xs font-semibold text-slate-600 hidden sm:block">{user?.name}</div>
+                        <div className="text-xs font-semibold text-slate-600 hidden sm:flex items-center gap-1.5">
+                            {user?.name}
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${
+                                isSuperAdmin ? 'bg-[#FF8A00] text-white' : 'bg-slate-200 text-slate-600'
+                            }`}>
+                                {isSuperAdmin ? <Crown className="w-2.5 h-2.5" /> : <ShieldCheck className="w-2.5 h-2.5" />}
+                                {isSuperAdmin ? 'Super Admin' : 'Admin'}
+                            </span>
+                        </div>
                         <div className="w-8 h-8 rounded-xl bg-[#0070F3] flex items-center justify-center text-white font-black text-sm">
                             {user?.name?.[0]?.toUpperCase() || 'A'}
                         </div>

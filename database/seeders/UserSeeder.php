@@ -10,14 +10,25 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        // Admin
+        // Super Admin — akses penuh termasuk manajemen role
+        User::updateOrCreate(
+            ['email' => 'superadmin@tulungjual.id'],
+            [
+                'name' => 'Super Admin TulungJual',
+                'no_hp' => '085222111193',
+                'password' => Hash::make('password'),
+                'role' => User::ROLE_SUPER_ADMIN,
+            ]
+        );
+
+        // Admin — akses panel tanpa manajemen role
         User::updateOrCreate(
             ['email' => 'admin@tulungjual.id'],
             [
                 'name' => 'Admin TulungJual',
                 'no_hp' => '085222111193',
                 'password' => Hash::make('password'),
-                'role' => 'admin',
+                'role' => User::ROLE_ADMIN,
             ]
         );
 
@@ -28,7 +39,7 @@ class UserSeeder extends Seeder
                 'name' => 'Budi Santoso',
                 'no_hp' => '081234567890',
                 'password' => Hash::make('password'),
-                'role' => 'user',
+                'role' => User::ROLE_USER,
             ]
         );
 
@@ -39,7 +50,7 @@ class UserSeeder extends Seeder
                 'name' => 'PT Graha Harmony Developer',
                 'no_hp' => '082199887766',
                 'password' => Hash::make('password'),
-                'role' => 'user',
+                'role' => User::ROLE_USER,
             ]
         );
     }
