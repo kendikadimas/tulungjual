@@ -100,11 +100,30 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
 
+    # Lewati deploy bila secrets belum dikonfigurasi
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+
     environment:
       name: production
       url: ${{ secrets.APP_URL }}
 
     steps:
+      - name: Validasi konfigurasi deploy
+        run: |
+          missing=""
+          [ -z "${{ secrets.SSH_HOST }}" ]     && missing="$missing SSH_HOST"
+          [ -z "${{ secrets.SSH_USER }}" ]     && missing="$missing SSH_USER"
+          [ -z "${{ secrets.SSH_PASSWORD }}" ] && missing="$missing SSH_PASSWORD"
+          [ -z "${{ secrets.DEPLOY_PATH }}" ]  && missing="$missing DEPLOY_PATH"
+          if [ -n "$missing" ]; then
+            echo "::error::Secret belum diisi:$missing"
+            echo "Buka Settings → Secrets and variables → Actions, lihat DEPLOYMENT.md"
+            exit 1
+          fi
+          echo "Konfigurasi secret lengkap."
+
       - name: Checkout code
         uses: actions/checkout@v4
 
