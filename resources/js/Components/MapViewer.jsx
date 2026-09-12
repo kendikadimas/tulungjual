@@ -1,5 +1,4 @@
-import React from 'react';
-import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
+import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -11,34 +10,58 @@ L.Icon.Default.mergeOptions({
 });
 
 export default function MapViewer({ lat, lng, isApproximate = false, title = 'Lokasi Properti' }) {
+    const containerRef = useRef(null);
+    const mapRef = useRef(null);
+
     const center = [lat || -8.067, lng || 111.901];
+    const zoom = isApproximate ? 14 : 16;
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+
+        if (mapRef.current) {
+            mapRef.current.remove();
+            mapRef.current = null;
+        }
+
+        const map = L.map(containerRef.current, {
+            center,
+            zoom,
+            scrollWheelZoom: false,
+        });
+
+        mapRef.current = map;
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
+
+        if (isApproximate) {
+            L.circle(center, {
+                radius: 600,
+                color: '#059669',
+                fillColor: '#10b981',
+                fillOpacity: 0.25,
+            }).addTo(map);
+        } else {
+            L.marker(center).addTo(map);
+        }
+
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 100);
+
+        return () => {
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
+        };
+    }, [lat, lng, isApproximate]);
 
     return (
         <div className="h-72 w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative z-0">
-            <MapContainer
-                center={center}
-                zoom={isApproximate ? 14 : 16}
-                scrollWheelZoom={false}
-                className="h-full w-full"
-            >
-                <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                {isApproximate ? (
-                    <Circle
-                        center={center}
-                        radius={600}
-                        pathOptions={{
-                            color: '#059669',
-                            fillColor: '#10b981',
-                            fillOpacity: 0.25,
-                        }}
-                    />
-                ) : (
-                    <Marker position={center} />
-                )}
-            </MapContainer>
+            <div ref={containerRef} className="h-full w-full" />
             {isApproximate && (
                 <div className="absolute top-3 left-3 bg-white/90 backdrop-blur text-[#002B7F] text-xs font-bold px-3 py-1.5 rounded-xl shadow-md border border-blue-200 z-[1000]">
                     Area Perkiraan (Privasi Alamat Diaktifkan)
