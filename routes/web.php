@@ -51,6 +51,8 @@ Route::middleware(['auth', EnsureIsAdmin::class])->prefix('admin')->name('admin.
     Route::get('/listings/{listing}', [AdminController::class, 'showListing'])->name('listings.show');
     Route::post('/listings/{listing}/approve', [AdminController::class, 'approveListing'])->name('listings.approve');
     Route::post('/listings/{listing}/reject', [AdminController::class, 'rejectListing'])->name('listings.reject');
+    Route::post('/listings/{listing}/verify-payment', [AdminController::class, 'verifyPayment'])->name('listings.verify-payment');
+    Route::post('/listings/{listing}/reject-payment', [AdminController::class, 'rejectPayment'])->name('listings.reject-payment');
     Route::delete('/listings/{listing}', [AdminController::class, 'destroyListing'])->name('listings.destroy');
     
     Route::get('/users', [AdminController::class, 'users'])->name('users.index');
@@ -62,9 +64,11 @@ Route::middleware(['auth', EnsureIsAdmin::class])->prefix('admin')->name('admin.
     Route::patch('/categories/{category}/toggle', [AdminController::class, 'toggleCategory'])->name('categories.toggle');
     Route::delete('/categories/{category}', [AdminController::class, 'destroyCategory'])->name('categories.destroy');
 
-    // Activity Log — super admin only
+    // Activity Log & Settings — super admin only
     Route::middleware(EnsureIsSuperAdmin::class)->group(function () {
         Route::get('/activity-logs', [AdminController::class, 'activityLogs'])->name('activity-logs.index');
+        Route::get('/settings', [AdminController::class, 'settings'])->name('settings.index');
+        Route::put('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
     });
 });
 

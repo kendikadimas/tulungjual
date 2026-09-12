@@ -10,7 +10,8 @@ import {
     XCircle,
     Tag,
     ShieldCheck,
-    History
+    History,
+    Wallet
 } from 'lucide-react';
 
 function timeAgo(dateStr) {
@@ -69,6 +70,24 @@ export default function Dashboard({ stats = {}, recentListings = [], recentActiv
                     </div>
                     <div className="text-3xl font-black text-rose-600">{stats.rejected_listings || 0}</div>
                     <div className="text-[11px] text-rose-500 mt-1">Rejected</div>
+                </div>
+
+                <div className="bg-amber-50 p-5 rounded-2xl border border-amber-200 shadow-sm">
+                    <div className="flex items-center justify-between text-amber-700 mb-2">
+                        <span className="text-xs font-semibold">Bayar Pending</span>
+                        <Wallet className="w-4 h-4 text-[#FF8A00]" />
+                    </div>
+                    <div className="text-3xl font-black text-[#FF8A00]">{stats.pending_payments || 0}</div>
+                    <div className="text-[11px] text-amber-600 mt-1">Perlu Verifikasi</div>
+                </div>
+
+                <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-200 shadow-sm">
+                    <div className="flex items-center justify-between text-emerald-700 mb-2">
+                        <span className="text-xs font-semibold">Bayar Verified</span>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div className="text-3xl font-black text-emerald-600">{stats.verified_payments || 0}</div>
+                    <div className="text-[11px] text-emerald-600 mt-1">Lunas</div>
                 </div>
 
                 <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">

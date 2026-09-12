@@ -9,17 +9,26 @@ import {
     XCircle, 
     Eye, 
     Building2,
-    ShieldCheck
+    ShieldCheck,
+    Wallet
 } from 'lucide-react';
+
+const PAYMENT_BADGE = {
+    verified: { cls: 'bg-emerald-100 text-emerald-700', label: 'Terverifikasi' },
+    pending: { cls: 'bg-amber-100 text-amber-800', label: 'Menunggu' },
+    rejected: { cls: 'bg-rose-100 text-rose-800', label: 'Ditolak' },
+    unpaid: { cls: 'bg-slate-100 text-slate-600', label: 'Belum Bayar' },
+};
 
 export default function Index({ listings, filters = {} }) {
     const safeFilters = (filters && !Array.isArray(filters)) ? filters : {};
     const [q, setQ] = React.useState(safeFilters.q || '');
     const [status, setStatus] = React.useState(safeFilters.status || '');
+    const [payment, setPayment] = React.useState(safeFilters.payment || '');
 
     const handleFilter = (e) => {
         e.preventDefault();
-        router.get('/admin/listings', { q, status }, { preserveState: true });
+        router.get('/admin/listings', { q, status, payment }, { preserveState: true });
     };
 
     const formatRupiah = (val) => {
@@ -45,12 +54,24 @@ export default function Index({ listings, filters = {} }) {
                     <select
                         value={status}
                         onChange={(e) => setStatus(e.target.value)}
-                        className="w-full sm:w-48 text-xs py-2 px-3 border border-slate-300 rounded-xl focus:ring-[#0070F3] font-medium"
+                        className="w-full sm:w-44 text-xs py-2 px-3 border border-slate-300 rounded-xl focus:ring-[#0070F3] font-medium"
                     >
                         <option value="">Semua Status Approval</option>
                         <option value="pending">Pending Approval</option>
                         <option value="approved">Approved (Tayang)</option>
                         <option value="rejected">Rejected (Ditolak)</option>
+                    </select>
+
+                    <select
+                        value={payment}
+                        onChange={(e) => setPayment(e.target.value)}
+                        className="w-full sm:w-44 text-xs py-2 px-3 border border-slate-300 rounded-xl focus:ring-[#0070F3] font-medium"
+                    >
+                        <option value="">Semua Status Bayar</option>
+                        <option value="pending">Menunggu Verifikasi</option>
+                        <option value="verified">Terverifikasi</option>
+                        <option value="rejected">Ditolak</option>
+                        <option value="unpaid">Belum Bayar</option>
                     </select>
 
                     <button
@@ -71,6 +92,7 @@ export default function Index({ listings, filters = {} }) {
                                     <th className="p-4">Jenis</th>
                                     <th className="p-4">Harga</th>
                                     <th className="p-4">Pengiklan</th>
+                                    <th className="p-4">Pembayaran</th>
                                     <th className="p-4">Status Approval</th>
                                     <th className="p-4 text-right">Aksi</th>
                                 </tr>
@@ -93,6 +115,16 @@ export default function Index({ listings, filters = {} }) {
                                         <td className="p-4">
                                             <div className="font-bold text-slate-800">{item.user?.name}</div>
                                             <div className="text-[11px] text-slate-500">{item.pengiklan_info?.no_wa || item.user?.email}</div>
+                                        </td>
+                                        <td className="p-4">
+                                            {(() => {
+                                                const badge = PAYMENT_BADGE[item.payment_status] || PAYMENT_BADGE.unpaid;
+                                                return (
+                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${badge.cls}`}>
+                                                        <Wallet className="w-3 h-3" /> {badge.label}
+                                                    </span>
+                                                );
+                                            })()}
                                         </td>
                                         <td className="p-4">
                                             {item.status_approval === 'approved' && (

@@ -11,18 +11,27 @@ import {
     Clock,
     FileText,
     Video,
+    Wallet,
+    ExternalLink,
     Image as ImageIcon
 } from 'lucide-react';
 
 export default function Show({ listing }) {
     const [rejectModalOpen, setRejectModalOpen] = React.useState(false);
+    const [rejectPaymentOpen, setRejectPaymentOpen] = React.useState(false);
 
     const approveForm = useForm({});
     const rejectForm = useForm({
         catatan_rejection: '',
     });
+    const verifyPaymentForm = useForm({ payment_note: '' });
+    const rejectPaymentForm = useForm({ payment_note: '' });
 
     const handleApprove = () => {
+        if (!paymentVerified) {
+            alert('Verifikasi bukti pembayaran terlebih dahulu sebelum menyetujui iklan.');
+            return;
+        }
         if (confirm('Setujui iklan ini agar langsung tayang di listing publik?')) {
             approveForm.post(`/admin/listings/${listing.id}/approve`);
         }
@@ -35,6 +44,20 @@ export default function Show({ listing }) {
         });
     };
 
+    const handleVerifyPayment = () => {
+        if (confirm('Verifikasi bukti pembayaran ini sebagai valid?')) {
+            verifyPaymentForm.post(`/admin/listings/${listing.id}/verify-payment`, { preserveScroll: true });
+        }
+    };
+
+    const handleRejectPaymentSubmit = (e) => {
+        e.preventDefault();
+        rejectPaymentForm.post(`/admin/listings/${listing.id}/reject-payment`, {
+            preserveScroll: true,
+            onSuccess: () => setRejectPaymentOpen(false),
+        });
+    };
+
     const formatRupiah = (val) => {
         if (!val) return 'Rp 0';
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
@@ -44,6 +67,7 @@ export default function Show({ listing }) {
     const dev = listing.developer_detail || {};
     const photos = listing.photos || [];
     const videos = listing.videos || [];
+    const paymentVerified = listing.payment_status === 'verified';
 
     return (
         <AdminLayout title={`Audit Iklan #${listing.id}`}>
@@ -95,13 +119,113 @@ export default function Show({ listing }) {
                     {listing.status_approval !== 'approved' && (
                         <button
                             onClick={handleApprove}
-                            disabled={approveForm.processing}
-                            className="px-5 py-2 bg-[#FF8A00] hover:bg-[#e67a00] text-white font-black text-xs rounded-xl transition flex items-center gap-1.5 shadow"
+                            disabled={approveForm.processing || !paymentVerified}
+                            title={!paymentVerified ? 'Verifikasi pembayaran terlebih dahulu' : 'Setujui iklan'}
+                            className={`px-5 py-2 font-black text-xs rounded-xl transition flex items-center gap-1.5 shadow ${
+                                paymentVerified
+                                    ? 'bg-[#FF8A00] hover:bg-[#e67a00] text-white'
+                                    : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                            }`}
                         >
                             <CheckCircle2 className="w-4 h-4" /> Setujui & Tayangkan
                         </button>
                     )}
                 </div>
+            </div>
+
+            {/* PAYMENT AUDIT BOX */}
+            <div className="bg-white p-6 sm:p-8 rounded-3xl border-2 border-[#0070F3] shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2">
+                        <Wallet className="w-6 h-6 text-[#0070F3]" />
+                        <h3 className="text-lg font-black text-[#002B7F]">Verifikasi Bukti Pembayaran</h3>
+                    </div>
+                    {listing.payment_status === 'verified' && (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Terverifikasi
+                        </span>
+                    )}
+                    {listing.payment_status === 'pending' && (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                            <Clock className="w-3.5 h-3.5" /> Menunggu Verifikasi
+                        </span>
+                    )}
+                    {listing.payment_status === 'rejected' && (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                            <XCircle className="w-3.5 h-3.5" /> Ditolak
+                        </span>
+                    )}
+                    {(listing.payment_status === 'unpaid' || !listing.payment_status) && (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                            Belum Bayar
+                        </span>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                    <div><span className="text-slate-400 block">Nominal Tagihan:</span> <span className="font-bold text-slate-800">{listing.payment_amount ? formatRupiah(listing.payment_amount) : '-'}</span></div>
+                    <div><span className="text-slate-400 block">Nama Pengirim:</span> <span className="font-bold text-slate-800">{listing.payment_sender_name || '-'}</span></div>
+                    <div><span className="text-slate-400 block">Metode Pengirim:</span> <span className="font-bold text-slate-800">{listing.payment_method || '-'}</span></div>
+                    <div><span className="text-slate-400 block">Diverifikasi Pada:</span> <span className="font-bold text-slate-800">{listing.payment_verified_at ? new Date(listing.payment_verified_at).toLocaleString('id-ID') : '-'}</span></div>
+                </div>
+
+                {listing.payment_note && (
+                    <div className={`text-xs p-3.5 rounded-2xl border ${listing.payment_status === 'verified' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'}`}>
+                        <span className="font-bold block mb-0.5">Catatan Verifikasi:</span>
+                        {listing.payment_note}
+                    </div>
+                )}
+
+                {listing.payment_proof_url ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="sm:col-span-2">
+                            {/\.pdf($|\?)/i.test(listing.payment_proof_url) ? (
+                                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-2">
+                                    <FileText className="w-8 h-8 text-[#0070F3] mx-auto" />
+                                    <p className="text-xs text-slate-600 font-semibold">Bukti pembayaran berupa dokumen PDF</p>
+                                    <a href={listing.payment_proof_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0070F3] hover:bg-[#005bb5] text-white rounded-xl text-xs font-bold transition">
+                                        <ExternalLink className="w-3.5 h-3.5" /> Buka Dokumen
+                                    </a>
+                                </div>
+                            ) : (
+                                <a href={listing.payment_proof_url} target="_blank" rel="noreferrer" className="block rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 group relative">
+                                    <img src={listing.payment_proof_url} alt="Bukti pembayaran" className="w-full max-h-80 object-contain" />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center">
+                                        <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-bold bg-black/60 px-3 py-1.5 rounded-lg transition">
+                                            Klik untuk perbesar
+                                        </span>
+                                    </div>
+                                </a>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <button
+                                onClick={handleVerifyPayment}
+                                disabled={verifyPaymentForm.processing || listing.payment_status === 'verified'}
+                                className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Verifikasi Pembayaran
+                            </button>
+                            <button
+                                onClick={() => setRejectPaymentOpen(true)}
+                                disabled={listing.payment_status === 'rejected' || !listing.payment_proof_url}
+                                className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <XCircle className="w-3.5 h-3.5" /> Tolak Bukti
+                            </button>
+                            <p className="text-[11px] text-slate-500 leading-relaxed">
+                                Iklan hanya dapat disetujui setelah bukti pembayaran diverifikasi.
+                            </p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl text-center">
+                        <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-2" />
+                        <p className="text-xs font-bold text-amber-800">Pengiklan belum mengunggah bukti pembayaran</p>
+                        <p className="text-[11px] text-amber-600 mt-1">Iklan tidak dapat disetujui sebelum pembayaran diverifikasi.</p>
+                    </div>
+                )}
             </div>
 
             {/* SENSITIVE LEGAL AUDIT BOX */}
@@ -475,6 +599,53 @@ export default function Show({ listing }) {
                                     className="px-5 py-2.5 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow"
                                 >
                                     Kirim Penolakan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Reject Payment Modal */}
+            {rejectPaymentOpen && (
+                <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+                        <div className="flex items-center gap-2 text-rose-600 font-bold text-lg">
+                            <Wallet className="w-5 h-5" />
+                            Tolak Bukti Pembayaran
+                        </div>
+                        <form onSubmit={handleRejectPaymentSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                                    Alasan Penolakan (Akan dibaca oleh Pengiklan) *
+                                </label>
+                                <textarea
+                                    rows={4}
+                                    value={rejectPaymentForm.data.payment_note}
+                                    onChange={(e) => rejectPaymentForm.setData('payment_note', e.target.value)}
+                                    placeholder="Contoh: Nominal transfer tidak sesuai, bukti buram, atau rekening tujuan salah..."
+                                    className="w-full text-xs p-3 border border-slate-300 rounded-2xl focus:ring-rose-500"
+                                    required
+                                />
+                                {rejectPaymentForm.errors.payment_note && (
+                                    <p className="text-xs text-rose-600 mt-1">{rejectPaymentForm.errors.payment_note}</p>
+                                )}
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setRejectPaymentOpen(false)}
+                                    className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={rejectPaymentForm.processing}
+                                    className="px-5 py-2.5 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow"
+                                >
+                                    Tolak Bukti
                                 </button>
                             </div>
                         </form>

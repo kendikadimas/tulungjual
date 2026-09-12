@@ -3,12 +3,18 @@ import AppLayout from '@/Layouts/AppLayout';
 import MapPicker from '@/Components/MapPicker';
 import { useForm, Link, router } from '@inertiajs/react';
 import {
-    ArrowLeft, Save, Building2, DollarSign, MapPin, ShieldCheck, Check, User, Image as ImageIcon, Video
+    ArrowLeft, Save, Building2, DollarSign, MapPin, ShieldCheck, Check, User, Image as ImageIcon, Video, Wallet, CheckCircle2, XCircle, Clock
 } from 'lucide-react';
 
-export default function Edit({ listing }) {
+export default function Edit({ listing, payment = {} }) {
     const pengiklan = listing.pengiklan_info || {};
     const existingPhotos = listing.photos || [];
+    const paymentEnabled = payment?.enabled !== false && payment?.enabled !== 0 && payment?.enabled !== '0';
+
+    const formatRupiah = (val) => {
+        if (!val) return 'Rp 0';
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
+    };
 
     const { data, setData, post, processing, errors } = useForm({
         _method: 'PUT',
@@ -161,6 +167,11 @@ export default function Edit({ listing }) {
         video_marketing_link: listing.developer_detail?.video_marketing_link || '',
         site_plan_file: null,
         brosur_file: null,
+
+        // 4.19 Bukti Pembayaran
+        payment_proof_file: null,
+        payment_method: listing.payment_method || '',
+        payment_sender_name: listing.payment_sender_name || '',
     });
 
     const [newPreviews, setNewPreviews] = React.useState([]);
@@ -795,6 +806,111 @@ export default function Edit({ listing }) {
                             </div>
                         </div>
                     </div>
+
+                    {/* 4.19 Bukti Pembayaran */}
+                    {paymentEnabled && (
+                        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                                <div className="flex items-center gap-2 text-[#002B7F] font-bold">
+                                    <Wallet className="w-5 h-5 text-[#FF8A00]" />
+                                    <h3 className="text-lg text-slate-900">4.19 Bukti Pembayaran</h3>
+                                </div>
+                                {listing.payment_status === 'verified' && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700">
+                                        <CheckCircle2 className="w-3.5 h-3.5" /> Terverifikasi
+                                    </span>
+                                )}
+                                {listing.payment_status === 'pending' && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800">
+                                        <Clock className="w-3.5 h-3.5" /> Menunggu Verifikasi
+                                    </span>
+                                )}
+                                {listing.payment_status === 'rejected' && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800">
+                                        <XCircle className="w-3.5 h-3.5" /> Ditolak
+                                    </span>
+                                )}
+                                {(listing.payment_status === 'unpaid' || !listing.payment_status) && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600">
+                                        Belum Bayar
+                                    </span>
+                                )}
+                            </div>
+
+                            {listing.payment_note && (
+                                <div className="text-xs p-3.5 rounded-2xl border bg-rose-50 border-rose-200 text-rose-700">
+                                    <span className="font-bold block mb-0.5">Catatan Admin:</span>
+                                    {listing.payment_note}
+                                </div>
+                            )}
+
+                            <div className="bg-[#001F5C] text-white rounded-2xl p-5 space-y-3">
+                                <div className="flex items-center justify-between gap-3">
+                                    <span className="text-xs text-blue-200">Nominal Transfer</span>
+                                    <span className="text-lg font-black text-[#FF8A00]">{formatRupiah(payment?.amount || listing.payment_amount || 0)}</span>
+                                </div>
+                                <div className="pt-3 border-t border-blue-900 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                                    <div>
+                                        <span className="text-blue-300 block text-[10px]">Bank</span>
+                                        <span className="font-bold">{payment?.bank_name || '-'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-blue-300 block text-[10px]">Nomor Rekening</span>
+                                        <span className="font-bold font-mono">{payment?.bank_account || '-'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-blue-300 block text-[10px]">Atas Nama</span>
+                                        <span className="font-bold">{payment?.bank_holder || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {listing.payment_proof_url && (
+                                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                                        <ImageIcon className="w-5 h-5 text-[#0070F3]" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-bold text-slate-800">Bukti pembayaran saat ini</p>
+                                        <a href={listing.payment_proof_url} target="_blank" rel="noreferrer" className="text-[11px] text-[#0070F3] hover:underline truncate block">
+                                            Lihat bukti yang diunggah
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Pengirim / Pemilik Rekening</label>
+                                    <input type="text" placeholder="Nama sesuai rekening pengirim" value={data.payment_sender_name} onChange={(e) => setData('payment_sender_name', e.target.value)} className={inputCls} />
+                                    {errors.payment_sender_name && <p className="text-xs text-rose-600 mt-1">{errors.payment_sender_name}</p>}
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Metode / Bank Pengirim</label>
+                                    <input type="text" placeholder="Contoh: Transfer BCA / M-Banking" value={data.payment_method} onChange={(e) => setData('payment_method', e.target.value)} className={inputCls} />
+                                    {errors.payment_method && <p className="text-xs text-rose-600 mt-1">{errors.payment_method}</p>}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                                    {listing.payment_proof_url ? 'Ganti Bukti Transfer (Opsional)' : 'Upload Bukti Transfer (JPG, PNG, atau PDF — maks 5 MB) *'}
+                                </label>
+                                <input
+                                    type="file"
+                                    accept="image/*,.pdf"
+                                    onChange={(e) => setData('payment_proof_file', e.target.files[0] || null)}
+                                    className="block w-full text-xs text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-[#FF8A00] hover:file:bg-amber-100"
+                                />
+                                {errors.payment_proof_file && <p className="text-xs text-rose-600 mt-1">{errors.payment_proof_file}</p>}
+                                {listing.payment_proof_url && (
+                                    <p className="text-[11px] text-slate-500 mt-1.5">
+                                        Mengunggah file baru akan mengatur ulang status pembayaran menjadi menunggu verifikasi.
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="pt-2 flex items-center justify-end gap-3">
                         <Link href="/iklan-saya" className="px-5 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">Batal</Link>

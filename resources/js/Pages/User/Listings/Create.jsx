@@ -21,10 +21,12 @@ import {
     Compass,
     Wrench,
     AlertCircle,
-    Video
+    Video,
+    Wallet
 } from 'lucide-react';
 
-export default function Create({ categories = [] }) {
+export default function Create({ categories = [], payment = {} }) {
+    const paymentEnabled = payment?.enabled !== false && payment?.enabled !== 0 && payment?.enabled !== '0';
     const { data, setData, post, processing, errors } = useForm({
         // 4.1 Informasi Dasar (wajib)
         jenis_iklan: 'Jual',
@@ -182,9 +184,19 @@ export default function Create({ categories = [] }) {
         setuju_sk: false,
         setuju_benar: false,
         setuju_platform: false,
+
+        // 4.19 Bukti Pembayaran
+        payment_proof_file: null,
+        payment_method: '',
+        payment_sender_name: '',
     });
 
     const [previewPhotos, setPreviewPhotos] = React.useState([]);
+
+    const formatRupiah = (val) => {
+        if (!val) return 'Rp 0';
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
+    };
 
     const handlePhotoChange = (e) => {
         const files = Array.from(e.target.files);
@@ -252,6 +264,8 @@ export default function Create({ categories = [] }) {
     };
 
     const isAllAgreed = data.setuju_sk && data.setuju_benar && data.setuju_platform;
+    const isPaymentReady = !paymentEnabled || !!data.payment_proof_file;
+    const canSubmit = isAllAgreed && isPaymentReady;
 
     return (
         <AppLayout title="Pasang Iklan Properti - TulungJual.id">
@@ -1377,6 +1391,99 @@ export default function Create({ categories = [] }) {
                         </div>
                     </div>
 
+                    {/* 4.19 Bukti Pembayaran */}
+                    {paymentEnabled && (
+                        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                            <div className="flex items-center gap-2 text-[#002B7F] font-bold border-b border-slate-100 pb-3">
+                                <Wallet className="w-5 h-5 text-[#FF8A00]" />
+                                <h3 className="text-lg text-slate-900">4.19 Bukti Pembayaran (Wajib)</h3>
+                            </div>
+
+                            {/* Instruksi Transfer */}
+                            <div className="bg-[#001F5C] text-white rounded-2xl p-5 space-y-3">
+                                <div className="flex items-center justify-between gap-3">
+                                    <span className="text-xs text-blue-200">Nominal Wajib Transfer</span>
+                                    <span className="text-lg font-black text-[#FF8A00]">
+                                        {formatRupiah(payment?.amount || 0)}
+                                    </span>
+                                </div>
+                                <div className="pt-3 border-t border-blue-900 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                                    <div>
+                                        <span className="text-blue-300 block text-[10px]">Bank</span>
+                                        <span className="font-bold">{payment?.bank_name || '-'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-blue-300 block text-[10px]">Nomor Rekening</span>
+                                        <span className="font-bold font-mono">{payment?.bank_account || '-'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-blue-300 block text-[10px]">Atas Nama</span>
+                                        <span className="font-bold">{payment?.bank_holder || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {Array.isArray(payment?.instructions) && payment.instructions.length > 0 && (
+                                <ol className="space-y-1.5 text-xs text-slate-600 list-decimal list-inside bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                                    {payment.instructions.map((ins, i) => (
+                                        <li key={i}>{ins}</li>
+                                    ))}
+                                </ol>
+                            )}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Pengirim / Pemilik Rekening</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Nama sesuai rekening pengirim"
+                                        value={data.payment_sender_name}
+                                        onChange={(e) => setData('payment_sender_name', e.target.value)}
+                                        className="w-full text-xs px-3.5 py-2.5 border border-slate-300 rounded-xl"
+                                    />
+                                    {errors.payment_sender_name && <p className="text-xs text-rose-600 mt-1">{errors.payment_sender_name}</p>}
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1">Metode / Bank Pengirim</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Contoh: Transfer BCA / M-Banking"
+                                        value={data.payment_method}
+                                        onChange={(e) => setData('payment_method', e.target.value)}
+                                        className="w-full text-xs px-3.5 py-2.5 border border-slate-300 rounded-xl"
+                                    />
+                                    {errors.payment_method && <p className="text-xs text-rose-600 mt-1">{errors.payment_method}</p>}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                                    Upload Bukti Transfer (JPG, PNG, atau PDF — maks 5 MB) *
+                                </label>
+                                <input
+                                    type="file"
+                                    accept="image/*,.pdf"
+                                    onChange={(e) => setData('payment_proof_file', e.target.files[0] || null)}
+                                    className="block w-full text-xs text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-[#FF8A00] hover:file:bg-amber-100"
+                                />
+                                {errors.payment_proof_file && <p className="text-xs text-rose-600 mt-1">{errors.payment_proof_file}</p>}
+                                {payment?.wa_confirmation && (
+                                    <p className="text-[11px] text-slate-500 mt-2">
+                                        Setelah mengunggah, Anda dapat konfirmasi via WhatsApp{' '}
+                                        <a
+                                            href={`https://wa.me/${String(payment.wa_confirmation).replace(/\D/g, '').replace(/^0/, '62')}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-[#0070F3] font-bold hover:underline"
+                                        >
+                                            di sini
+                                        </a>.
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     {/* 4.18 Persetujuan (3 Wajib) */}
                     <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4">
                         <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">
@@ -1416,11 +1523,16 @@ export default function Create({ categories = [] }) {
                         </div>
 
                         <div className="pt-4">
+                            {!isPaymentReady && (
+                                <p className="text-xs text-rose-600 font-semibold mb-3 text-center">
+                                    Unggah bukti pembayaran terlebih dahulu pada seksi 4.19 sebelum mengajukan iklan.
+                                </p>
+                            )}
                             <button
                                 type="submit"
-                                disabled={!isAllAgreed || processing}
+                                disabled={!canSubmit || processing}
                                 className={`w-full py-4 text-center text-sm font-black rounded-2xl shadow-lg transition ${
-                                    isAllAgreed && !processing
+                                    canSubmit && !processing
                                         ? 'bg-[#FF8A00] hover:bg-[#e67a00] text-white shadow-orange-100'
                                         : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                                 }`}

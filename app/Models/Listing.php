@@ -43,6 +43,14 @@ class Listing extends Model
                     }
                 }
             }
+
+            // Bukti pembayaran
+            if ($listing->payment_proof_url) {
+                $path = ltrim(Str::after($listing->payment_proof_url, '/storage/'), '/');
+                if ($path && ! Str::startsWith($path, ['http://', 'https://']) && $disk->exists($path)) {
+                    $disk->delete($path);
+                }
+            }
         });
     }
 
@@ -52,6 +60,10 @@ class Listing extends Model
     protected $hidden = [
         'nomor_sertifikat',
         'nama_pemegang_hak',
+        'payment_proof_url',
+        'payment_sender_name',
+        'payment_note',
+        'payment_verified_by',
     ];
 
     protected function casts(): array
@@ -75,6 +87,7 @@ class Listing extends Model
             'lebar_muka' => 'float',
             'titik_lat' => 'float',
             'titik_lng' => 'float',
+            'payment_verified_at' => 'datetime',
         ];
     }
 
@@ -101,6 +114,37 @@ class Listing extends Model
     public function pengiklanInfo(): HasOne
     {
         return $this->hasOne(PengiklanInfo::class);
+    }
+
+    public function paymentVerifier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'payment_verified_by');
+    }
+
+    /**
+     * Apakah bukti pembayaran sudah diunggah oleh pengiklan?
+     */
+    public function hasPaymentProof(): bool
+    {
+        return ! empty($this->payment_proof_url);
+    }
+
+    /**
+     * Apakah pembayaran sudah diverifikasi admin?
+     */
+    public function isPaymentVerified(): bool
+    {
+        return $this->payment_status === 'verified';
+    }
+
+    public function paymentStatusLabel(): string
+    {
+        return match ($this->payment_status) {
+            'verified' => 'Terverifikasi',
+            'pending' => 'Menunggu Verifikasi',
+            'rejected' => 'Ditolak',
+            default => 'Belum Bayar',
+        };
     }
 
     /**

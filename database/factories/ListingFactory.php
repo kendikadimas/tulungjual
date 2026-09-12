@@ -61,6 +61,14 @@ class ListingFactory extends Factory
             // Approval
             'status_approval' => 'pending',
             'is_active' => true,
+
+            // Pembayaran (default: sudah terverifikasi agar alur moderasi lancar)
+            'payment_status' => 'verified',
+            'payment_proof_url' => '/storage/listings/payments/dummy.jpg',
+            'payment_amount' => 50000,
+            'payment_sender_name' => 'Pengirim Uji',
+            'payment_method' => 'Transfer Bank',
+            'payment_verified_at' => now(),
         ];
     }
 
@@ -69,6 +77,32 @@ class ListingFactory extends Factory
         return $this->state(fn () => [
             'status_approval' => 'approved',
             'is_active' => true,
+        ]);
+    }
+
+    /**
+     * Iklan yang menunggu verifikasi pembayaran.
+     */
+    public function awaitingPayment(): static
+    {
+        return $this->state(fn () => [
+            'payment_status' => 'pending',
+            'payment_proof_url' => '/storage/listings/payments/proof.jpg',
+            'payment_verified_at' => null,
+            'payment_verified_by' => null,
+        ]);
+    }
+
+    /**
+     * Iklan tanpa bukti pembayaran.
+     */
+    public function unpaid(): static
+    {
+        return $this->state(fn () => [
+            'payment_status' => 'unpaid',
+            'payment_proof_url' => null,
+            'payment_verified_at' => null,
+            'payment_verified_by' => null,
         ]);
     }
 }

@@ -42,6 +42,9 @@ class HandleInertiaRequests extends Middleware
             'pendingCount' => fn () => $request->user()?->isAdmin()
                 ? Listing::where('status_approval', 'pending')->count()
                 : 0,
+            'pendingPaymentCount' => fn () => $request->user()?->isAdmin()
+                ? Listing::where('payment_status', 'pending')->count()
+                : 0,
         ];
     }
 }

@@ -15,6 +15,7 @@ import {
     History,
     ShieldCheck,
     Crown,
+    Wallet,
 } from 'lucide-react';
 
 const navItems = [
@@ -28,6 +29,7 @@ const navItems = [
         href: '/admin/listings',
         icon: FileText,
         badgeKey: 'pending',
+        paymentBadgeKey: 'payment',
     },
     {
         label: 'Kelola Pengguna',
@@ -45,10 +47,16 @@ const navItems = [
         icon: History,
         superAdminOnly: true,
     },
+    {
+        label: 'Pengaturan Pembayaran',
+        href: '/admin/settings',
+        icon: Wallet,
+        superAdminOnly: true,
+    },
 ];
 
 export default function AdminLayout({ children, title }) {
-    const { auth, pendingCount = 0 } = usePage().props;
+    const { auth, pendingCount = 0, pendingPaymentCount = 0 } = usePage().props;
     const user = auth?.user;
     const isSuperAdmin = user?.role === 'super_admin';
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -104,6 +112,16 @@ export default function AdminLayout({ children, title }) {
                             {item.badgeKey === 'pending' && pendingCount > 0 && (
                                 <span className="text-[10px] font-black bg-[#FF8A00] text-white px-2 py-0.5 rounded-full min-w-[20px] text-center">
                                     {pendingCount}
+                                </span>
+                            )}
+                            {item.paymentBadgeKey === 'payment' && pendingPaymentCount > 0 && item.badgeKey !== 'pending' && (
+                                <span className="text-[10px] font-black bg-emerald-500 text-white px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                                    {pendingPaymentCount}
+                                </span>
+                            )}
+                            {item.badgeKey === 'pending' && pendingCount === 0 && item.paymentBadgeKey === 'payment' && pendingPaymentCount > 0 && (
+                                <span className="text-[10px] font-black bg-emerald-500 text-white px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                                    {pendingPaymentCount}
                                 </span>
                             )}
                             {active && <ChevronRight className="w-3.5 h-3.5 text-white/70" />}
@@ -205,6 +223,15 @@ export default function AdminLayout({ children, title }) {
                             >
                                 <Clock className="w-3.5 h-3.5 text-[#FF8A00]" />
                                 {pendingCount} Pending
+                            </Link>
+                        )}
+                        {pendingPaymentCount > 0 && (
+                            <Link
+                                href="/admin/listings?payment=pending"
+                                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-200 transition"
+                            >
+                                <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+                                {pendingPaymentCount} Bayar
                             </Link>
                         )}
                         <div className="text-xs font-semibold text-slate-600 hidden sm:flex items-center gap-1.5">

@@ -40,6 +40,8 @@ class ListingManagementTest extends TestCase
             'tampilkan_no_telepon' => true,
             'status_approval' => 'approved',
             'is_active' => true,
+            'payment_status' => 'verified',
+            'payment_proof_url' => '/storage/listings/payments/dummy.jpg',
         ], $overrides));
 
         PengiklanInfo::create([

@@ -7,6 +7,7 @@ use App\Mail\ListingRejected;
 use App\Models\ActivityLog;
 use App\Models\Category;
 use App\Models\Listing;
+use App\Models\Setting;
 use App\Models\User;
 use App\Support\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
@@ -25,6 +26,8 @@ class AdminController extends Controller
             'pending_listings' => Listing::where('status_approval', 'pending')->count(),
             'approved_listings' => Listing::where('status_approval', 'approved')->count(),
             'rejected_listings' => Listing::where('status_approval', 'rejected')->count(),
+            'pending_payments' => Listing::where('payment_status', 'pending')->count(),
+            'verified_payments' => Listing::where('payment_status', 'verified')->count(),
             'total_users' => User::where('role', User::ROLE_USER)->count(),
             'total_admins' => User::whereIn('role', [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])->count(),
             'total_categories' => Category::count(),
@@ -55,6 +58,10 @@ class AdminController extends Controller
             $query->where('status_approval', $request->status);
         }
 
+        if ($request->filled('payment')) {
+            $query->where('payment_status', $request->payment);
+        }
+
         if ($request->filled('q')) {
             $q = $request->q;
             $query->where(function ($sub) use ($q) {
@@ -70,14 +77,21 @@ class AdminController extends Controller
 
         return Inertia::render('Admin/Listings/Index', [
             'listings' => $listings,
-            'filters' => (object) $request->only(['status', 'q']),
+            'filters' => (object) $request->only(['status', 'q', 'payment']),
         ]);
     }
 
     public function showListing(Listing $listing): Response
     {
         $listing->load(['user', 'photos', 'videos', 'developerDetail', 'pengiklanInfo']);
-        $listingData = $listing->makeVisible(['nomor_sertifikat', 'nama_pemegang_hak'])->toArray();
+        $listingData = $listing->makeVisible([
+            'nomor_sertifikat',
+            'nama_pemegang_hak',
+            'payment_proof_url',
+            'payment_sender_name',
+            'payment_note',
+            'payment_verified_by',
+        ])->toArray();
 
         return Inertia::render('Admin/Listings/Show', [
             'listing' => $listingData,
@@ -86,6 +100,11 @@ class AdminController extends Controller
 
     public function approveListing(Listing $listing): RedirectResponse
     {
+        // Wajib verifikasi pembayaran dulu bila fitur pembayaran aktif
+        if (Setting::get('payment_enabled', '1') === '1' && ! $listing->isPaymentVerified()) {
+            return back()->with('error', 'Bukti pembayaran belum diverifikasi. Verifikasi pembayaran terlebih dahulu sebelum menyetujui iklan.');
+        }
+
         $listing->update([
             'status_approval' => 'approved',
             'catatan_rejection' => null,
@@ -145,6 +164,66 @@ class AdminController extends Controller
         }
 
         return back()->with('success', 'Iklan telah ditolak (Rejected) dengan catatan.');
+    }
+
+    /**
+     * Verifikasi bukti pembayaran pengiklan.
+     */
+    public function verifyPayment(Request $request, Listing $listing): RedirectResponse
+    {
+        if (! $listing->hasPaymentProof()) {
+            return back()->with('error', 'Pengiklan belum mengunggah bukti pembayaran.');
+        }
+
+        $request->validate([
+            'payment_note' => 'nullable|string|max:500',
+        ]);
+
+        $listing->update([
+            'payment_status' => 'verified',
+            'payment_note' => $request->payment_note ?: null,
+            'payment_verified_at' => now(),
+            'payment_verified_by' => $request->user()->id,
+        ]);
+
+        ActivityLogger::log(
+            action: 'payment.verify',
+            category: 'payment',
+            description: "Memverifikasi bukti pembayaran iklan \"{$listing->judul}\"",
+            subject: $listing,
+            subjectLabel: $listing->judul,
+            meta: ['payment_amount' => $listing->payment_amount],
+        );
+
+        return back()->with('success', 'Bukti pembayaran berhasil diverifikasi. Iklan siap disetujui.');
+    }
+
+    /**
+     * Tolak bukti pembayaran pengiklan.
+     */
+    public function rejectPayment(Request $request, Listing $listing): RedirectResponse
+    {
+        $request->validate([
+            'payment_note' => 'required|string|max:500',
+        ]);
+
+        $listing->update([
+            'payment_status' => 'rejected',
+            'payment_note' => $request->payment_note,
+            'payment_verified_at' => null,
+            'payment_verified_by' => null,
+        ]);
+
+        ActivityLogger::log(
+            action: 'payment.reject',
+            category: 'payment',
+            description: "Menolak bukti pembayaran iklan \"{$listing->judul}\"",
+            subject: $listing,
+            subjectLabel: $listing->judul,
+            meta: ['payment_note' => $request->payment_note],
+        );
+
+        return back()->with('success', 'Bukti pembayaran ditolak dengan catatan.');
     }
 
     public function destroyListing(Listing $listing): RedirectResponse
@@ -371,5 +450,55 @@ class AdminController extends Controller
             'logs' => $logs,
             'filters' => (object) $request->only(['category', 'q']),
         ]);
+    }
+
+    /**
+     * Halaman pengaturan pembayaran (khusus Super Admin).
+     */
+    public function settings(): Response
+    {
+        return Inertia::render('Admin/Settings/Index', [
+            'settings' => Setting::paymentConfig(),
+        ]);
+    }
+
+    /**
+     * Simpan pengaturan pembayaran (khusus Super Admin).
+     */
+    public function updateSettings(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'enabled' => 'required|boolean',
+            'amount' => 'required|numeric|min:0',
+            'bank_name' => 'required|string|max:255',
+            'bank_account' => 'required|string|max:255',
+            'bank_holder' => 'required|string|max:255',
+            'instructions' => 'nullable|string|max:2000',
+            'wa_confirmation' => 'nullable|string|max:255',
+        ]);
+
+        Setting::setMany([
+            'payment_enabled' => $validated['enabled'] ? '1' : '0',
+            'payment_amount' => (string) $validated['amount'],
+            'payment_bank_name' => $validated['bank_name'],
+            'payment_bank_account' => $validated['bank_account'],
+            'payment_bank_holder' => $validated['bank_holder'],
+            'payment_instructions' => $validated['instructions'] ?? '',
+            'payment_wa_confirmation' => $validated['wa_confirmation'] ?? '',
+        ], 'payment');
+
+        ActivityLogger::log(
+            action: 'settings.payment_update',
+            category: 'settings',
+            description: 'Memperbarui pengaturan informasi pembayaran',
+            meta: [
+                'enabled' => $validated['enabled'],
+                'amount' => $validated['amount'],
+                'bank_name' => $validated['bank_name'],
+                'bank_account' => $validated['bank_account'],
+            ],
+        );
+
+        return back()->with('success', 'Pengaturan pembayaran berhasil disimpan!');
     }
 }

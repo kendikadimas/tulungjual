@@ -174,6 +174,8 @@ class AdminRoleTest extends TestCase
         $listing = Listing::factory()->create([
             'status_approval' => 'pending',
             'is_active' => true,
+            'payment_status' => 'verified',
+            'payment_proof_url' => '/storage/listings/payments/dummy.jpg',
         ]);
 
         $this->actingAs($this->superAdmin())
@@ -233,7 +235,12 @@ class AdminRoleTest extends TestCase
     public function test_activity_log_records_actor_details(): void
     {
         $admin = $this->admin();
-        $listing = Listing::factory()->create(['status_approval' => 'pending', 'is_active' => true]);
+        $listing = Listing::factory()->create([
+            'status_approval' => 'pending',
+            'is_active' => true,
+            'payment_status' => 'verified',
+            'payment_proof_url' => '/storage/listings/payments/dummy.jpg',
+        ]);
 
         $this->actingAs($admin)->post("/admin/listings/{$listing->id}/approve");
 
@@ -248,7 +255,12 @@ class AdminRoleTest extends TestCase
 
     public function test_activity_logs_page_renders_with_data(): void
     {
-        $listing = Listing::factory()->create(['status_approval' => 'pending', 'is_active' => true]);
+        $listing = Listing::factory()->create([
+            'status_approval' => 'pending',
+            'is_active' => true,
+            'payment_status' => 'verified',
+            'payment_proof_url' => '/storage/listings/payments/dummy.jpg',
+        ]);
 
         $this->actingAs($this->superAdmin())
             ->post("/admin/listings/{$listing->id}/approve");

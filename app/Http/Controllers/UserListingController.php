@@ -8,6 +8,7 @@ use App\Models\Listing;
 use App\Models\ListingPhoto;
 use App\Models\ListingVideo;
 use App\Models\PengiklanInfo;
+use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +26,9 @@ class UserListingController extends Controller
             ->latest()
             ->paginate(10);
 
+        // Pemilik berhak melihat catatan verifikasi pembayaran miliknya
+        $listings->through(fn (Listing $listing) => $listing->makeVisible(['payment_note']));
+
         return Inertia::render('User/Listings/Index', [
             'listings' => $listings,
         ]);
@@ -36,6 +40,7 @@ class UserListingController extends Controller
 
         return Inertia::render('User/Listings/Create', [
             'categories' => $categories,
+            'payment' => Setting::paymentConfig(),
         ]);
     }
 
@@ -95,6 +100,12 @@ class UserListingController extends Controller
             // 4.13 Hubungan & Kewenangan
             'pernyataan_kewenangan' => 'accepted',
 
+            // 4.19 Bukti Pembayaran (wajib bila fitur aktif)
+            'payment_proof_file' => (Setting::get('payment_enabled', '1') === '1' ? 'required' : 'nullable')
+                .'|file|mimes:jpeg,png,jpg,webp,pdf|max:5120',
+            'payment_method' => 'nullable|string|max:255',
+            'payment_sender_name' => 'nullable|string|max:255',
+
             // 4.18 Persetujuan 3 checkbox
             'setuju_sk' => 'accepted',
             'setuju_benar' => 'accepted',
@@ -103,6 +114,14 @@ class UserListingController extends Controller
 
         DB::transaction(function () use ($request) {
             $slug = Str::slug($request->judul) . '-' . Str::lower(Str::random(6));
+
+            // Bukti pembayaran (wajib bila fitur aktif)
+            $paymentProofUrl = null;
+            if ($request->hasFile('payment_proof_file')) {
+                $paymentProofUrl = Storage::url(
+                    $request->file('payment_proof_file')->store('listings/payments', 'public')
+                );
+            }
 
             $listing = Listing::create([
                 'user_id' => $request->user()->id,
@@ -197,6 +216,11 @@ class UserListingController extends Controller
                 'cocok_untuk_komersial' => $request->cocok_untuk_komersial ?: [],
                 'cara_dihubungi' => $request->cara_dihubungi ?: 'WA',
                 'tampilkan_no_telepon' => (bool) $request->tampilkan_no_telepon,
+                'payment_proof_url' => $paymentProofUrl,
+                'payment_amount' => Setting::get('payment_amount') ? (int) Setting::get('payment_amount') : null,
+                'payment_method' => $request->payment_method ?: null,
+                'payment_sender_name' => $request->payment_sender_name ?: null,
+                'payment_status' => $paymentProofUrl ? 'pending' : 'unpaid',
                 'status_approval' => 'pending',
                 'is_active' => true,
             ]);
@@ -303,11 +327,13 @@ class UserListingController extends Controller
         }
 
         $listing->load(['photos', 'videos', 'developerDetail', 'pengiklanInfo']);
+        $listing->makeVisible(['payment_proof_url', 'payment_sender_name', 'payment_note']);
         $categories = Category::where('is_active', true)->get();
 
         return Inertia::render('User/Listings/Edit', [
             'listing' => $listing,
             'categories' => $categories,
+            'payment' => Setting::paymentConfig(),
         ]);
     }
 
@@ -364,7 +390,29 @@ class UserListingController extends Controller
             'site_plan_file' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
             'brosur_file' => 'nullable|file|mimes:pdf|max:15360',
             'video_marketing_link' => 'nullable|url|max:255',
+
+            // 4.19 Bukti Pembayaran
+            'payment_proof_file' => ($listing->payment_proof_url ? 'nullable' : (Setting::get('payment_enabled', '1') === '1' ? 'required' : 'nullable'))
+                .'|file|mimes:jpeg,png,jpg,webp,pdf|max:5120',
+            'payment_method' => 'nullable|string|max:255',
+            'payment_sender_name' => 'nullable|string|max:255',
         ]);
+
+        // Bukti pembayaran: hanya diproses bila user mengunggah ulang
+        $paymentProofUrl = $listing->payment_proof_url;
+        $paymentStatus = $listing->payment_status;
+        if ($request->hasFile('payment_proof_file')) {
+            if ($listing->payment_proof_url) {
+                $old = ltrim(Str::after($listing->payment_proof_url, '/storage/'), '/');
+                if ($old && ! Str::startsWith($old, ['http://', 'https://'])) {
+                    Storage::disk('public')->delete($old);
+                }
+            }
+            $paymentProofUrl = Storage::url(
+                $request->file('payment_proof_file')->store('listings/payments', 'public')
+            );
+            $paymentStatus = 'pending';
+        }
 
         $listing->update([
             // 4.1 Dasar
@@ -482,6 +530,16 @@ class UserListingController extends Controller
             // 4.17 Kontak & Privasi
             'cara_dihubungi' => $request->cara_dihubungi ?: 'WA',
             'tampilkan_no_telepon' => (bool) $request->tampilkan_no_telepon,
+
+            // 4.19 Bukti Pembayaran
+            'payment_proof_url' => $paymentProofUrl,
+            'payment_method' => $request->payment_method ?: $listing->payment_method,
+            'payment_sender_name' => $request->payment_sender_name ?: $listing->payment_sender_name,
+            'payment_status' => $paymentStatus,
+            // Reset catatan & verifikasi bila bukti diunggah ulang
+            'payment_note' => $paymentProofUrl !== $listing->payment_proof_url ? null : $listing->payment_note,
+            'payment_verified_at' => $paymentProofUrl !== $listing->payment_proof_url ? null : $listing->payment_verified_at,
+            'payment_verified_by' => $paymentProofUrl !== $listing->payment_proof_url ? null : $listing->payment_verified_by,
 
             'is_active' => $request->has('is_active') ? (bool) $request->is_active : $listing->is_active,
         ]);

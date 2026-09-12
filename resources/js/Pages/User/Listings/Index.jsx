@@ -12,7 +12,8 @@ import {
     Eye, 
     Trash2,
     EyeOff,
-    Power
+    Power,
+    Wallet
 } from 'lucide-react';
 
 export default function Index({ listings }) {
@@ -100,6 +101,26 @@ export default function Index({ listings }) {
                                                         <EyeOff className="w-3.5 h-3.5" /> Nonaktif
                                                     </span>
                                                 )}
+                                                {item.payment_status === 'verified' && (
+                                                    <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1">
+                                                        <Wallet className="w-3.5 h-3.5" /> Pembayaran OK
+                                                    </span>
+                                                )}
+                                                {item.payment_status === 'pending' && (
+                                                    <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 flex items-center gap-1">
+                                                        <Clock className="w-3.5 h-3.5" /> Verifikasi Bayar
+                                                    </span>
+                                                )}
+                                                {item.payment_status === 'rejected' && (
+                                                    <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 flex items-center gap-1">
+                                                        <XCircle className="w-3.5 h-3.5" /> Bukti Bayar Ditolak
+                                                    </span>
+                                                )}
+                                                {(!item.payment_status || item.payment_status === 'unpaid') && (
+                                                    <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-600 flex items-center gap-1">
+                                                        <Wallet className="w-3.5 h-3.5" /> Belum Bayar
+                                                    </span>
+                                                )}
                                                 <span className="text-xs text-slate-500 font-medium">
                                                     {item.jenis_iklan} • {item.jenis_properti}
                                                 </span>
@@ -120,6 +141,12 @@ export default function Index({ listings }) {
                                             {item.catatan_rejection && (
                                                 <p className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-xl font-medium">
                                                     Alasan Penolakan: {item.catatan_rejection}
+                                                </p>
+                                            )}
+
+                                            {item.payment_status === 'rejected' && item.payment_note && (
+                                                <p className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-xl font-medium">
+                                                    Bukti pembayaran ditolak: {item.payment_note} — silakan unggah ulang pada halaman Edit.
                                                 </p>
                                             )}
                                         </div>
