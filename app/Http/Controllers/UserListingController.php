@@ -118,7 +118,7 @@ class UserListingController extends Controller
             // Bukti pembayaran (wajib bila fitur aktif)
             $paymentProofUrl = null;
             if ($request->hasFile('payment_proof_file')) {
-                $paymentProofUrl = Storage::url(
+                $paymentProofUrl = Storage::disk('public')->url(
                     $request->file('payment_proof_file')->store('listings/payments', 'public')
                 );
             }
@@ -231,7 +231,7 @@ class UserListingController extends Controller
                     $path = $photo->store('listings/photos', 'public');
                     ListingPhoto::create([
                         'listing_id' => $listing->id,
-                        'url_foto' => Storage::url($path),
+                        'url_foto' => Storage::disk('public')->url($path),
                         'urutan' => $idx + 1,
                     ]);
                 }
@@ -288,11 +288,11 @@ class UserListingController extends Controller
             if ($request->jenis_pengiklan === 'Developer') {
                 $sitePlanUrl = null;
                 if ($request->hasFile('site_plan_file')) {
-                    $sitePlanUrl = Storage::url($request->file('site_plan_file')->store('listings/developer', 'public'));
+                    $sitePlanUrl = Storage::disk('public')->url($request->file('site_plan_file')->store('listings/developer', 'public'));
                 }
                 $brosurUrl = null;
                 if ($request->hasFile('brosur_file')) {
-                    $brosurUrl = Storage::url($request->file('brosur_file')->store('listings/developer', 'public'));
+                    $brosurUrl = Storage::disk('public')->url($request->file('brosur_file')->store('listings/developer', 'public'));
                 }
 
                 DeveloperDetail::create([
@@ -408,7 +408,7 @@ class UserListingController extends Controller
                     Storage::disk('public')->delete($old);
                 }
             }
-            $paymentProofUrl = Storage::url(
+            $paymentProofUrl = Storage::disk('public')->url(
                 $request->file('payment_proof_file')->store('listings/payments', 'public')
             );
             $paymentStatus = 'pending';
@@ -563,12 +563,12 @@ class UserListingController extends Controller
 
             $sitePlanUrl = $dev?->site_plan_url;
             if ($request->hasFile('site_plan_file')) {
-                $sitePlanUrl = Storage::url($request->file('site_plan_file')->store('listings/developer', 'public'));
+                $sitePlanUrl = Storage::disk('public')->url($request->file('site_plan_file')->store('listings/developer', 'public'));
             }
 
             $brosurUrl = $dev?->brosur_url;
             if ($request->hasFile('brosur_file')) {
-                $brosurUrl = Storage::url($request->file('brosur_file')->store('listings/developer', 'public'));
+                $brosurUrl = Storage::disk('public')->url($request->file('brosur_file')->store('listings/developer', 'public'));
             }
 
             DeveloperDetail::updateOrCreate(
@@ -601,7 +601,7 @@ class UserListingController extends Controller
                 $path = $photo->store('listings/photos', 'public');
                 ListingPhoto::create([
                     'listing_id' => $listing->id,
-                    'url_foto' => Storage::url($path),
+                    'url_foto' => Storage::disk('public')->url($path),
                     'urutan' => $lastOrder + $idx + 1,
                 ]);
             }

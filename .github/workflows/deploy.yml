@@ -1,0 +1,220 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Jalankan test suite sebagai gerbang sebelum deploy
+  # ---------------------------------------------------------------------------
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: tulungjual_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: mbstring, pdo, pdo_mysql, bcmath, ctype, fileinfo, json, openssl, tokenizer, xml, gd, zip
+          coverage: none
+
+      - name: Copy .env
+        run: cp .env.example .env
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Generate application key
+        run: php artisan key:generate
+
+      - name: Run tests
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: tulungjual_test
+          DB_USERNAME: root
+          DB_PASSWORD: ""
+        run: php artisan test
+
+  # ---------------------------------------------------------------------------
+  # 2. Build frontend assets di CI (server produksi belum tentu punya Node)
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build Assets
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build production assets
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-build
+          path: public/build
+          retention-days: 3
+
+  # ---------------------------------------------------------------------------
+  # 3. Deploy ke server produksi
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: build
+
+    environment:
+      name: production
+      url: ${{ secrets.APP_URL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: public-build
+          path: public/build
+
+      # Pull kode terbaru + install dependency PHP
+      - name: Sync code & install PHP dependencies
+        uses: appleboy/ssh-action@v1
+        env:
+          PHP_BIN: ${{ secrets.PHP_BIN || 'php' }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          envs: PHP_BIN
+          script_stop: true
+          script: |
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            # Tentukan binary PHP (bisa dioverride lewat secret PHP_BIN)
+            PHP_BIN="${PHP_BIN:-php}"
+            if ! command -v "$PHP_BIN" >/dev/null 2>&1; then
+              PHP_BIN="$(command -v php || true)"
+            fi
+            echo "==> Menggunakan PHP: $PHP_BIN ($($PHP_BIN -r 'echo PHP_VERSION;'))"
+
+            # Tentukan binary Composer
+            COMPOSER_BIN=""
+            if command -v composer >/dev/null 2>&1; then
+              COMPOSER_BIN="composer"
+            elif [ -f "$HOME/composer.phar" ]; then
+              COMPOSER_BIN="$PHP_BIN $HOME/composer.phar"
+            elif [ -f "$(pwd)/composer.phar" ]; then
+              COMPOSER_BIN="$PHP_BIN composer.phar"
+            else
+              echo "ERROR: Composer tidak ditemukan di server." >&2
+              exit 1
+            fi
+            echo "==> Menggunakan Composer: $COMPOSER_BIN"
+
+            echo "==> Mengambil kode terbaru"
+            git fetch --all
+            git reset --hard origin/main
+
+            echo "==> Install dependency Composer (production)"
+            $COMPOSER_BIN install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+            echo "==> Menjalankan migrasi database"
+            $PHP_BIN artisan migrate --force
+
+      # Upload aset hasil build (public/build tidak ikut git)
+      - name: Upload compiled assets
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: "public/build"
+          target: "${{ secrets.DEPLOY_PATH }}"
+          overwrite: true
+
+      # Bersihkan & rebuild cache, pastikan permission storage benar
+      - name: Finalize deployment
+        uses: appleboy/ssh-action@v1
+        env:
+          PHP_BIN: ${{ secrets.PHP_BIN || 'php' }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          envs: PHP_BIN
+          script_stop: true
+          script: |
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            PHP_BIN="${PHP_BIN:-php}"
+
+            echo "==> Membersihkan cache lama"
+            $PHP_BIN artisan optimize:clear
+
+            echo "==> Menyiapkan direktori storage"
+            mkdir -p storage/app/public storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+            chmod -R 775 storage bootstrap/cache || true
+
+            echo "==> Memastikan symlink public/storage tersedia"
+            if [ ! -e public/storage ]; then
+              if ln -s "$(pwd)/storage/app/public" public/storage 2>/dev/null; then
+                echo "Symlink public/storage berhasil dibuat."
+              else
+                echo "PERINGATAN: symlink gagal dibuat (fungsi symlink diblokir hosting)."
+                echo "           Buat manual via cPanel File Manager -> public/storage"
+                echo "           Target: $(pwd)/storage/app/public"
+              fi
+            else
+              echo "Symlink public/storage sudah ada."
+            fi
+
+            echo "==> Membangun ulang cache"
+            $PHP_BIN artisan config:cache
+            $PHP_BIN artisan route:cache
+            $PHP_BIN artisan view:cache
+
+            echo "==> Deploy selesai"
+            $PHP_BIN artisan --version
