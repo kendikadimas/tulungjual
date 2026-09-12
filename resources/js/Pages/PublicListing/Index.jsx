@@ -332,7 +332,11 @@ export default function Index({ listings = { data: [] }, categories = [], filter
                         {listings.data.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {listings.data.map((item) => (
-                                    <div key={item.id} className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl transition flex flex-col group">
+                                    <Link 
+                                        key={item.id} 
+                                        href={`/listing/${item.slug}`}
+                                        className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition flex flex-col group cursor-pointer block text-inherit"
+                                    >
                                         <div className="relative aspect-[4/3] bg-slate-200 overflow-hidden">
                                             <img 
                                                 src={item.photos?.[0]?.url_foto || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=800&q=80'} 
@@ -365,10 +369,8 @@ export default function Index({ listings = { data: [] }, categories = [], filter
                                                     {formatRupiah(item.harga)}
                                                     {item.bisa_nego && <span className="text-[10px] text-slate-500 font-normal ml-1">(Nego)</span>}
                                                 </div>
-                                                <h4 className="font-bold text-slate-900 text-sm line-clamp-2 hover:text-[#0070F3] transition mt-1">
-                                                    <Link href={`/listing/${item.slug}`}>
-                                                        {item.judul}
-                                                    </Link>
+                                                <h4 className="font-bold text-slate-900 text-sm line-clamp-2 group-hover:text-[#0070F3] transition mt-1">
+                                                    {item.judul}
                                                 </h4>
                                                 <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                                                     <MapPin className="w-3.5 h-3.5 text-slate-400" />
@@ -394,17 +396,16 @@ export default function Index({ listings = { data: [] }, categories = [], filter
                                             <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                                                 <span className="flex items-center gap-1 text-[11px] text-slate-500">
                                                     <ShieldCheck className="w-3.5 h-3.5 text-[#0070F3]" />
-                                                    {item.pengiklan_info?.jenis_pengiklan || 'Pengiklan'}
+                                                    {item.pengiklan_info?.jenis_pengiklan || 'Pemilik'}
                                                 </span>
-                                                <Link 
-                                                    href={`/listing/${item.slug}`}
-                                                    className="font-bold text-[#0070F3] hover:text-[#002B7F] flex items-center gap-0.5 text-xs"
+                                                <span 
+                                                    className="font-bold text-[#0070F3] group-hover:text-[#002B7F] flex items-center gap-0.5 text-xs transition"
                                                 >
-                                                    Lihat Detail <ArrowRight className="w-3.5 h-3.5" />
-                                                </Link>
+                                                    Lihat Detail <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                                                </span>
                                             </div>
                                         </div>
-                                    </div>
+                                    </Link>
                                 ))}
                             </div>
                         ) : (

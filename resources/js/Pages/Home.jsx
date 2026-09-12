@@ -252,6 +252,129 @@ export default function Home({ featuredListings = [], categories = [], stats = {
                 </div>
             </section>
 
+            {/* Featured Listings Section */}
+            <section className="py-16 bg-slate-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+                        <div>
+                            <h2 className="text-xs font-bold uppercase tracking-wider text-[#0070F3] mb-1">Rekomendasi Terbaik</h2>
+                            <h3 className="text-2xl sm:text-3xl font-extrabold text-[#002B7F]">
+                                Properti Terbaru di TulungJual.id
+                            </h3>
+                        </div>
+                        <Link 
+                            href="/listing"
+                            className="inline-flex items-center gap-1.5 text-sm font-bold text-[#0070F3] hover:text-[#002B7F]"
+                        >
+                            Lihat Semua Properti <ChevronRight className="w-4 h-4" />
+                        </Link>
+                    </div>
+
+                    {featuredListings.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {featuredListings.map((item) => (
+                                <Link 
+                                    key={item.id} 
+                                    href={`/listing/${item.slug}`}
+                                    className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition flex flex-col group cursor-pointer block text-inherit"
+                                >
+                                    <div className="relative aspect-[4/3] bg-slate-200 overflow-hidden">
+                                        <img 
+                                            src={item.photos?.[0]?.url_foto || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=800&q=80'} 
+                                            alt={item.judul} 
+                                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                                        />
+                                        <div className="absolute top-3 left-3 flex gap-2">
+                                            <span className="px-3 py-1 bg-[#0070F3] text-white text-xs font-bold rounded-lg shadow">
+                                                {item.jenis_iklan}
+                                            </span>
+                                            <span className="px-3 py-1 bg-[#002B7F]/80 backdrop-blur text-white text-xs font-medium rounded-lg">
+                                                {item.jenis_properti}
+                                            </span>
+                                        </div>
+                                        {/* Photo count badge */}
+                                        {item.photos?.length > 0 && (
+                                            <div className="absolute top-3 right-3 bg-black/60 backdrop-blur text-white text-[11px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1">
+                                                <Camera className="w-3 h-3" /> {item.photos.length}
+                                            </div>
+                                        )}
+                                        <div className="absolute bottom-3 left-3 right-3 flex justify-between items-center text-xs font-semibold text-white">
+                                            <span className="bg-slate-900/70 backdrop-blur px-2.5 py-1 rounded-md flex items-center gap-1">
+                                                <MapPin className="w-3.5 h-3.5 text-[#FF8A00]" />
+                                                {item.kota}
+                                            </span>
+                                            <span className="bg-slate-900/60 backdrop-blur px-2.5 py-1 rounded-md text-[10px]">
+                                                {timeAgo(item.created_at)}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                                        <div>
+                                            <div className="text-xl font-black text-[#002B7F] mb-1">
+                                                {formatRupiah(item.harga)}
+                                                {item.bisa_nego && <span className="text-xs text-slate-500 font-normal ml-2">(Nego)</span>}
+                                            </div>
+                                            <h4 className="font-bold text-slate-900 line-clamp-2 group-hover:text-[#0070F3] transition">
+                                                {item.judul}
+                                            </h4>
+                                            <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                                                <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                                                {item.kecamatan}, {item.kota}
+                                            </p>
+                                        </div>
+
+                                        {/* Physical Quick Data */}
+                                        <div className="grid grid-cols-3 gap-2 py-3 px-3 bg-blue-50/50 rounded-2xl text-center text-xs font-medium text-slate-700 border border-blue-100">
+                                            <div>
+                                                <span className="block text-slate-400 text-[10px]">LT</span>
+                                                {item.luas_tanah ? `${item.luas_tanah} m²` : '-'}
+                                            </div>
+                                            <div>
+                                                <span className="block text-slate-400 text-[10px]">LB</span>
+                                                {item.luas_bangunan ? `${item.luas_bangunan} m²` : '-'}
+                                            </div>
+                                            <div>
+                                                <span className="block text-slate-400 text-[10px]">KT / KM</span>
+                                                {item.kamar_tidur || 0} / {item.kamar_mandi || 0}
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                                            <div className="flex items-center gap-1.5 text-xs">
+                                                <ShieldCheck className="w-3.5 h-3.5 text-[#0070F3]" />
+                                                <span className="text-slate-500">{item.pengiklan_info?.jenis_pengiklan || 'Pemilik'}</span>
+                                            </div>
+                                            <span 
+                                                className="text-xs font-bold text-[#0070F3] group-hover:text-[#002B7F] flex items-center gap-1 transition"
+                                            >
+                                                Detail <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                                            </span>
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-16 space-y-4">
+                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto text-[#0070F3]">
+                                <HomeIcon className="w-8 h-8" />
+                            </div>
+                            <h3 className="text-lg font-bold text-[#002B7F]">Belum ada properti yang ditampilkan</h3>
+                            <p className="text-sm text-slate-500 max-w-sm mx-auto">
+                                Jadilah yang pertama memasang iklan properti di TulungJual.id.
+                            </p>
+                            <Link
+                                href="/pasang-iklan"
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-[#FF8A00] hover:bg-[#e67a00] text-white rounded-2xl font-bold text-sm shadow transition"
+                            >
+                                Pasang Iklan Sekarang <ArrowRight className="w-4 h-4" />
+                            </Link>
+                        </div>
+                    )}
+                </div>
+            </section>
+
             {/* Mengapa TulungJual? - 6 Poin Keunggulan */}
             <section className="py-16 bg-white border-b border-slate-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -326,128 +449,6 @@ export default function Home({ featuredListings = [], categories = [], stats = {
                             </p>
                         </div>
                     </div>
-                </div>
-            </section>
-
-            {/* Featured Listings Section */}
-            <section className="py-16 bg-slate-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
-                        <div>
-                            <h2 className="text-xs font-bold uppercase tracking-wider text-[#0070F3] mb-1">Rekomendasi Terbaik</h2>
-                            <h3 className="text-2xl sm:text-3xl font-extrabold text-[#002B7F]">
-                                Properti Terbaru di TulungJual.id
-                            </h3>
-                        </div>
-                        <Link 
-                            href="/listing"
-                            className="inline-flex items-center gap-1.5 text-sm font-bold text-[#0070F3] hover:text-[#002B7F]"
-                        >
-                            Lihat Semua Properti <ChevronRight className="w-4 h-4" />
-                        </Link>
-                    </div>
-
-                    {featuredListings.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {featuredListings.map((item) => (
-                                <div key={item.id} className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl transition flex flex-col group">
-                                    <div className="relative aspect-[4/3] bg-slate-200 overflow-hidden">
-                                        <img 
-                                            src={item.photos?.[0]?.url_foto || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=800&q=80'} 
-                                            alt={item.judul} 
-                                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                                        />
-                                        <div className="absolute top-3 left-3 flex gap-2">
-                                            <span className="px-3 py-1 bg-[#0070F3] text-white text-xs font-bold rounded-lg shadow">
-                                                {item.jenis_iklan}
-                                            </span>
-                                            <span className="px-3 py-1 bg-[#002B7F]/80 backdrop-blur text-white text-xs font-medium rounded-lg">
-                                                {item.jenis_properti}
-                                            </span>
-                                        </div>
-                                        {/* Photo count badge */}
-                                        {item.photos?.length > 0 && (
-                                            <div className="absolute top-3 right-3 bg-black/60 backdrop-blur text-white text-[11px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1">
-                                                <Camera className="w-3 h-3" /> {item.photos.length}
-                                            </div>
-                                        )}
-                                        <div className="absolute bottom-3 left-3 right-3 flex justify-between items-center text-xs font-semibold text-white">
-                                            <span className="bg-slate-900/70 backdrop-blur px-2.5 py-1 rounded-md flex items-center gap-1">
-                                                <MapPin className="w-3.5 h-3.5 text-[#FF8A00]" />
-                                                {item.kota}
-                                            </span>
-                                            <span className="bg-slate-900/60 backdrop-blur px-2.5 py-1 rounded-md text-[10px]">
-                                                {timeAgo(item.created_at)}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                                        <div>
-                                            <div className="text-xl font-black text-[#002B7F] mb-1">
-                                                {formatRupiah(item.harga)}
-                                                {item.bisa_nego && <span className="text-xs text-slate-500 font-normal ml-2">(Nego)</span>}
-                                            </div>
-                                            <h4 className="font-bold text-slate-900 line-clamp-2 hover:text-[#0070F3] transition">
-                                                <Link href={`/listing/${item.slug}`}>
-                                                    {item.judul}
-                                                </Link>
-                                            </h4>
-                                            <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
-                                                <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                                                {item.kecamatan}, {item.kota}
-                                            </p>
-                                        </div>
-
-                                        {/* Physical Quick Data */}
-                                        <div className="grid grid-cols-3 gap-2 py-3 px-3 bg-blue-50/50 rounded-2xl text-center text-xs font-medium text-slate-700 border border-blue-100">
-                                            <div>
-                                                <span className="block text-slate-400 text-[10px]">LT</span>
-                                                {item.luas_tanah ? `${item.luas_tanah} m²` : '-'}
-                                            </div>
-                                            <div>
-                                                <span className="block text-slate-400 text-[10px]">LB</span>
-                                                {item.luas_bangunan ? `${item.luas_bangunan} m²` : '-'}
-                                            </div>
-                                            <div>
-                                                <span className="block text-slate-400 text-[10px]">KT / KM</span>
-                                                {item.kamar_tidur || 0} / {item.kamar_mandi || 0}
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                                            <div className="flex items-center gap-1.5 text-xs">
-                                                <ShieldCheck className="w-3.5 h-3.5 text-[#0070F3]" />
-                                                <span className="text-slate-500">{item.pengiklan_info?.jenis_pengiklan || 'Pemilik'}</span>
-                                            </div>
-                                            <Link 
-                                                href={`/listing/${item.slug}`}
-                                                className="text-xs font-bold text-[#0070F3] hover:text-[#002B7F] flex items-center gap-1"
-                                            >
-                                                Detail <ArrowRight className="w-3.5 h-3.5" />
-                                            </Link>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-16 space-y-4">
-                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto text-[#0070F3]">
-                                <HomeIcon className="w-8 h-8" />
-                            </div>
-                            <h3 className="text-lg font-bold text-[#002B7F]">Belum ada properti yang ditampilkan</h3>
-                            <p className="text-sm text-slate-500 max-w-sm mx-auto">
-                                Jadilah yang pertama memasang iklan properti di TulungJual.id.
-                            </p>
-                            <Link
-                                href="/pasang-iklan"
-                                className="inline-flex items-center gap-2 px-6 py-3 bg-[#FF8A00] hover:bg-[#e67a00] text-white rounded-2xl font-bold text-sm shadow transition"
-                            >
-                                Pasang Iklan Sekarang <ArrowRight className="w-4 h-4" />
-                            </Link>
-                        </div>
-                    )}
                 </div>
             </section>
 
