@@ -78,7 +78,13 @@ export default function Home({ featuredListings = [], categories = [], stats = {
     return (
         <AppLayout title="TulungJual.id - Temukan Properti yang Tepat">
             {/* Hero Section sesuai Mockup Laptop */}
-            <section className="relative bg-gradient-to-b from-[#001F5C] via-[#002B7F] to-[#001238] text-white py-16 md:py-24 overflow-hidden">
+            <section className="relative bg-[#001F5C] text-white py-16 md:py-24 overflow-hidden">
+                {/* Background Image dengan Dark Overlay */}
+                <div 
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-105 transition-transform duration-1000"
+                    style={{ backgroundImage: `url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=2000&q=80')` }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#001F5C]/95 via-[#002B7F]/90 to-[#001238]/85 backdrop-blur-[2px]" />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#0070F3]/30 via-transparent to-transparent pointer-events-none" />
                 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
